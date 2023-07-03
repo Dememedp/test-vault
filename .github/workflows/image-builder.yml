@@ -1,3 +1,32 @@
 name: ImageBuilder
-# Run this workflow every time a new commit pushed to your repository
 on: push
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Import Secrets
+      id: import-secrets
+      # use the local changes
+      uses: ./
+      # run against a specific version of vault-action
+      # uses: hashicorp/vault-action@v2.1.2
+      with:
+        url: http://localhost:8200
+        method: token
+        token: testtoken
+        secrets: |
+          secret/data/test-json-string jsonString;
+
+    - name: Check Secrets
+      run: |
+        touch secrets.json
+        echo "${{ steps.import-secrets.outputs.jsonString }}" >> secrets.json
+
+    - name: Check json file format
+      run: |
+        echo
+        cat secrets.json
+        jq -c . < secrets.json
