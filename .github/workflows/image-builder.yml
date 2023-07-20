@@ -1,28 +1,26 @@
-name: ImageBuilder
-on: push
-
+name: auth_deploy_prod
+on:
+  push:
+    branches: 
+      - master
+    paths:
+      - 'niffler-auth/**'
+      
 jobs:
-  build:
-    runs-on: self-hosted
+  checkout:
+    runs-on: prod-runner  
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Import Secrets
-      id: import-secrets
-      uses: hashicorp/vault-action@v2
-      with:
-        url: http://127.0.0.1:8200
-        tlsSkipVerify: true
-        token: \${{ secrets.VAULT_TOKEN }}
-        secrets: |
-          secret/data/ci app_secret
+      - uses: actions/checkout@v3
 
-    - name: Check Secrets
-      run: |
-        touch secrets.json
-        echo "${{ steps.import-secrets.outputs.app_secret }}" >> secrets.json
-
-    - name: Check json file format
-      run: |
-        echo
-        cat secrets.json
+  deploy:
+    runs-on: prod-runner
+    needs: checkout
+    steps:  
+      - name: deploy
+        working-directory: ./
+        run: |
+         docker-compose up -d
+         docker system prune  -a -f
+      - name: push
+        run: |
+         docker push ${{ vars.DOCKER_HUB_ACC }}/niffler-auth:${{github.run_number}}
